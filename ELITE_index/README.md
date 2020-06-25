@@ -1,4 +1,4 @@
-
+![elite_stand_stripe](https://github.com/PKullberg/EEA_and_BD/blob/master/figures/elitestripe3.PNG?raw=true)
 # Automated process of calculating ELITE forest condition indices
 
 This repo contains documentation and scripts of full pipeline for calculating ELITE forest condition indices and derived metrics in protected areas (PAs). In the process index is calculated for each forest stand in provided set of protected areas, after which PA specific metrics are provided. These include PA mean index value and metrics describing amount of good condition forest patches. Only input data in process is biotope stand characteristics from SAKTI, Protected area biotope information system by Finnish Metsähallitus (Suojelualueiden kuviotietojärjestelmän biotooppikuvioaineisto). Data is not openly available and is not provided here - however, full process is demonstrated and visualized in R Markdown file / output html that is located in the root folder. 
