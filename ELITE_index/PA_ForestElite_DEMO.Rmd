@@ -1,0 +1,106 @@
+---
+title: "Calculating forest ELITE in Protected areas - DEMO"
+author: "Author: T. Jussila (tytti.jussila@ymparisto.fi)"
+date: "2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/elitestripe3.PNG)
+
+INPUT: Biotope compartment data of Finnish protected areas (Suojelualueiden biotooppikuviot), from SAKTI database by Metsähallitus.
+
+- biotope compartments shapefile (SK_BTKUV.shp) = stands
+- related treestratum database files (SK_PUUELAVO.dbf, SK_PUULAHO.dbf)
+
+
+OUTPUT: geospatial or csv file(s): 
+
+- stand specific ELITE indices / 
+- PA specific ELITE metrics 
+- supporting fields (see "output_fields.txt")
+
+
+
+### Process
+
+First of all - get all the functions from "R"-folder
+
+    sapply(list.files(path="R/", full.names=TRUE), source)
+
+Each step in process is written as specific function. The first two are automatically applied by sourcing.
+
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/R_folder.PNG){width=38% }
+
+
+```{r, include=FALSE}
+sapply(list.files(path="R/", full.names=TRUE), source)
+```
+```` {r, include=FALSE}
+# Set working directory to elite_workflow folder:
+setwd("C:/Users/E1007595/Documents/ELITE_ja_linnut/elite_workflow")
+#setwd("C:/elite_workflow")
+#
+#### INPUT FILES ####
+#
+BTKUV_file <- "Data/SK_BTKUV.shp" # biotope data including forest stands (.shp)
+PUUELAVO_file <- "Data/SK_PUUELAVO.dbf" # tree stratum data of living trees (.dbf)
+PUULAHO_file <- "Data/SK_PUULAHO.dbf" # tree stratum data of deadwood (.dbf)
+#
+#
+### PROCESSING OPTIONS ###
+#
+# specify PA sites to which ELITE will be calculated
+PA_sites <- c("All") 
+
+# c("All") - All types of PA's
+# c("NATURA") - All NATURA areas
+# c("VSA") - All national arotected areas (Valtion luonnonuojelualueet)
+# c("YSA") - All private protected areas 
+# c("VMS") - All state owned areas for other protective uses (valtion muut suojelutarkoituksiin varatut alueet)
+# c("NATURA", "VSA") - Multiple types of PA's
+#
+# ELITE index treshold value(s) defining "quality forest patch" (0-1)
+quality_treshold <- c(0.3, 0.5)
+#
+#
+#### OUTPUT OPTIONS ####
+#
+# Set (existing) folder for output:
+writeout_folder <- "write_out"
+# Set output format ("geospatial"/"csv"/"both). Feature centroid coordinates are calculated in field if not geospatial.
+writeout_format <- "both"
+# Specify file format if output will be geospatial file ("GPKG", "ESRI Shapefile", etc.):
+driver <- "GPKG"
+#
+# Output ELITE data: ("stand"/"PA"/"both")
+output_level <- "both"
+#
+````
+### Read in and prepare data
+#### 03 Read in biotope compartment data
+
+Get biotope compartment data from specified areas (Full data, defined PA types or by list of names). Different PA types have overlapping stands, so same stand may occur multiple times. PA type is stored in one column. Excessive fields are removed and the rest are renamed from finnish to english.
+
+```` {r}
+BT_COMPARTMENTS <- read_compartmentdata(PA_sites) 
+````
+
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/BTKUV.PNG)
+
+(Forest vegetation zone and inventory year are not necessary columns for calculation process, but are stored for further analysis)
+
+
+#### 04 Subset to forests
+
+````{r}
+STANDS <- subset_to_forests(BT_COMPARTMENTS)
+````
+
+````{r}
+plot(st_geometry(BT_COMPARTMENTS[BT_COMPARTMENTS$PA_id==1808,]), col ="grey")
+plot(st_geometry(STANDS[STANDS$PA_id==1808,]), col ="green", add=TRUE)
+````
