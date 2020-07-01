@@ -80,8 +80,14 @@ driver <- "GPKG"
 output_level <- "both"
 #
 ````
-### Read in and prepare data
-#### 03 Read in biotope compartment data
+<cr>  
+<cr>  
+
+### PART I: Read in and prepare data  
+
+<cr>  
+
+#### 02 Read in biotope compartment data  
 
 Get biotope compartment data from specified areas (Full data, defined PA types or by list of names). Different PA types have overlapping stands, so same stand may occur multiple times. PA type is stored in one column. Excessive fields are removed and the rest are renamed from finnish to english.
 
@@ -91,10 +97,12 @@ BT_COMPARTMENTS <- read_compartmentdata(PA_sites)
 
 ![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/BTKUV.PNG)
 
-(Forest vegetation zone and inventory year are not necessary columns for calculation process, but are stored for further analysis)
+(Forest vegetation zone and inventory year are not necessary columns for calculation process, but are stored for further analysis) 
 
-
-#### 04 Subset to forests
+<cr>  
+<cr>  
+    
+#### 03 Subset to forests  
 
 ````{r}
 STANDS <- subset_to_forests(BT_COMPARTMENTS)
@@ -104,3 +112,187 @@ STANDS <- subset_to_forests(BT_COMPARTMENTS)
 plot(st_geometry(BT_COMPARTMENTS[BT_COMPARTMENTS$PA_id==1808,]), col ="grey")
 plot(st_geometry(STANDS[STANDS$PA_id==1808,]), col ="green", add=TRUE)
 ````
+
+
+
+#### 04 Read in tree stratum tables  
+
+Read in database files related to stands. Select and rename necessary variables.
+````{r}
+LIVING_TREES <- read_treestratum_tables("living", STANDS$stand_id)
+DEADWOOD <-  read_treestratum_tables("dead", STANDS$stand_id)
+````
+LIVING_TREES
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/LIVINGTREES.PNG){width=90%}  
+
+DEADWOOD  
+
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/DEADWOOD.PNG){width=51%}
+
+Decay classes are not used in this ELITE version.  
+
+<cr>  
+<cr>   
+
+#### 05 Add/Calculate fields for supporting information  
+
+- inventory year (instead of full time stamp)
+- habitat classification needed in ELITE calculator (groves/moist heath forests/dry heath forests)
+- total area of PA (ha)
+- forest area of PA (ha) and percentage of PA total area (%)
+
+````{r}
+STANDS <- supporting_fields(STANDS, BT_COMPARTMENTS)
+````
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/supportingfields.PNG){width=48%}
+
+<cr>  
+<cr>  
+
+#### 06 Remove stands that have insufficient data
+
+Remove stands (and stratums related to them) that miss data of living trees or deadwood. Remove stands that do not have either area or geometry. 
+````{r}
+STANDS <- remove_stand_if_missingdata(STANDS, LIVING_TREES, DEADWOOD)
+LIVING_TREES <- remove_stratum_if_missingdata(LIVING_TREES, STANDS)
+DEADWOOD <- remove_stratum_if_missingdata(DEADWOOD, STANDS)
+````
+    
+for example: 
+
+    # remove stands which miss related DEADWOOD table
+    STANDS <- STANDS[STANDS$stand_id %in% DEADWOOD$stand_id, ]
+    
+<cr>  
+<cr>  
+
+### PART II: Calculate ELITE input variables
+
+<cr>  
+
+#### 07 Calculate number of large trunks in stands
+
+Groups stratums by stand id and sums number of large trees (diameter over 40cm as default) of all stratums in stand.  
+````{r, warning=FALSE, message=FALSE}
+stand_largetrunks_df <- calc_largetrunks(LIVING_TREES)
+````
+Stratums have only data of diameter mean values, and thus size distribution and number of large trunks in stratums has to be estimated. So, before actually summing number of large trees of stratums in stand, calc_largetrunks function calculates an estimate of number of large trees in each stratum.  
+
+    LIVING_TREES$large_trunks <- apply(LIVING_TREES, 1, function(row) { 
+      G <- as.numeric(row['basalarea']) # m2
+      calc_largestems(G, treshold_cm, estimate_weibull(row))} 
+    )
+    
+Estimate_weibull function calibrates Weibull distribution function by stratum tree species, mean diameter and age. Species specific c-parameter parameters here are from study of Siipilehto (1999), and were calibrated in forests of Southern and Eastern Finland. Finally, stratum large tree number is calculated from stratum basal area using the diameter distribution probability function and its integral of diameters greater than large tree treshold value (40cm). Stratum large trees are then summed in each stand. 
+
+<cr>  
+<cr>  
+
+#### 08 Calculate amount of broad-leaved trees in stands
+
+Groups stratums by stand id and sums volume (m3) of trees of all stratums of broad-leaved species .
+````{r}
+stand_broadleaved_df <- calc_broadleaved(LIVING_TREES)
+````
+
+<cr>  
+<cr>  
+
+#### 09 Calculate amount of deadwood in stands
+
+Groups stratums by stand id and sums volume (m3) of deadwood of all stratums in stand.
+````{r}
+stand_deadwood_df    <- calc_deadwood(DEADWOOD)
+````
+
+<cr>  
+<cr>  
+
+#### Merge ELITE input variables back to stand data
+
+````{r}
+STANDS <- merge(STANDS, stand_largetrunks_df, by = 'stand_id', all.x = TRUE)
+STANDS <- merge(STANDS, stand_broadleaved_df, by = 'stand_id', all.x = TRUE)
+STANDS <- merge(STANDS, stand_deadwood_df, by = 'stand_id', all.x = TRUE)
+
+````
+
+<cr>  
+<cr>  
+
+
+#### 10 Convert input values into amount per ha
+
+````{r}
+STANDS <- inputvalues_per_ha(STANDS)
+````
+      
+      inputvalues_per_ha <- function(STANDS) {
+          STANDS$large_trunks <- STANDS$large_trunks/STANDS$area_ha
+          STANDS$broad_leaved <- STANDS$broad_leaved/STANDS$area_ha
+          STANDS$dead_wood <- STANDS$dead_wood/STANDS$area_ha
+        
+          return(STANDS)
+      }    
+
+<cr>  
+<cr>  
+
+### PART III: Calculate stand ELITE indices and PA specific ELITE metrics
+  
+<cr>  
+<cr>  
+
+#### 11 Calculate ELITE index for each stand
+
+````{r}
+STANDS$elite <- apply(STANDS, 1, function(row) {
+  
+  ELITE_value(cur_values = c(dead_wood = row[['dead_wood']], 
+                             large_trunks = row[['large_trunks']], 
+                             broad_leaved = row[['broad_leaved']]), 
+              habitat = row[['habitat']],
+              exceed_warnings = FALSE)
+  #
+})
+````
+
+````{r, include= FALSE}
+ #url <-  "https://github.com/PKullberg/EEA_and_BD/blob/master/figures/CalculatingELITE_english.PNG?raw=true"
+#![](`r url`)
+````
+ELITE index is calculated by comparing values of current input variables to habitat specific reference values. Also weights between input variables vary between habitats. 
+
+<center>
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/CalculatingELITE_english.PNG){width=80%}
+</center>
+
+In practice this is done by ELITE_calculator function, that returns a index value between 0 and 1:
+
+    ELITE_value <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list =         feature_weights, exceed_warnings = T) {
+      
+      stopifnot(habitat %in% names(reference_variable_list))
+      
+      # read right reference values and weights
+      ref_values <- reference_variable_list[[habitat]]
+      weights <- weight_list[[habitat]]
+      
+      # if inputs exceed reference values replace them with reference
+      if(exceed_warnings) if(any(cur_values > ref_values)) warning("One or more input values exceed the reference      value. Replacing exceeding values with reference value.\n")
+      cur_values[cur_values > ref_values] <- ref_values[cur_values > ref_values]
+      
+      # compute the ELITE value
+      prod(1 - weights * (1 - cur_values / ref_values))
+      
+    }
+
+
+<cr>  
+<cr>  
+
+
+
+References: 
+
+Siipilehto J. (1999). Improving the accuracy of predicted basal-area diameter distribution in advanced stands by determining stem number. Silva Fennica vol. 33 no. 4 article id 650. https://doi.org/10.14214/sf.650
+
