@@ -11,6 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/elitestripe3.PNG)
 
+<cr>  
+<cr>  
+
 INPUT: Biotope compartment data of Finnish protected areas (Suojelualueiden biotooppikuviot), from SAKTI database by Metsähallitus.
 
 - biotope compartments shapefile (SK_BTKUV.shp) = stands
@@ -39,46 +42,47 @@ Each step in process is written as specific function. The first two are automati
 ```{r, include=FALSE}
 sapply(list.files(path="R/", full.names=TRUE), source)
 ```
-```` {r, include=FALSE}
-# Set working directory to elite_workflow folder:
+
+There are few parameters to be defined by user. Working directory, input and ouput paths are mandatory. Others options define desired output type, output format and quality tresholds used in calculation of PA specific ELITE metrics.  
+
+```` {r}
+# Working directory:
 setwd("C:/Users/E1007595/Documents/ELITE_ja_linnut/elite_workflow")
 #setwd("C:/elite_workflow")
-#
+
 #### INPUT FILES ####
-#
-BTKUV_file <- "Data/SK_BTKUV.shp" # biotope data including forest stands (.shp)
+
+BTKUV_file <- "Data/SK_BTKUV.shp" # biotope compartments (.shp)
 PUUELAVO_file <- "Data/SK_PUUELAVO.dbf" # tree stratum data of living trees (.dbf)
 PUULAHO_file <- "Data/SK_PUULAHO.dbf" # tree stratum data of deadwood (.dbf)
-#
-#
-### PROCESSING OPTIONS ###
-#
-# specify PA sites to which ELITE will be calculated
-PA_sites <- c("All") 
 
-# c("All") - All types of PA's
-# c("NATURA") - All NATURA areas
-# c("VSA") - All national arotected areas (Valtion luonnonuojelualueet)
-# c("YSA") - All private protected areas 
-# c("VMS") - All state owned areas for other protective uses (valtion muut suojelutarkoituksiin varatut alueet)
-# c("NATURA", "VSA") - Multiple types of PA's
-#
-# ELITE index treshold value(s) defining "quality forest patch" (0-1)
+
+### PROCESSING OPTIONS ###
+
+# Define "quality forest patch" ELITE treshold value(S) (0-1)
 quality_treshold <- c(0.3, 0.5)
-#
-#
+
+# Choose input PA areas  
+PA_sites <- c("All")  # /"NATURA"/"VSA"/"YSA"/"VMS"/ c( multiple types ) / c(named PAs)
+
+# NATURA - Natura 2000 areas
+# VSA - State owned protected areas 
+# YSA - Private protected areas 
+# VMS - State owned areas for other protective uses 
+
+
 #### OUTPUT OPTIONS ####
-#
-# Set (existing) folder for output:
+
+# Output folder (located in working directory):
 writeout_folder <- "write_out"
-# Set output format ("geospatial"/"csv"/"both). Feature centroid coordinates are calculated in field if not geospatial.
+# Output format ("geospatial"/"csv"/"both")
 writeout_format <- "both"
-# Specify file format if output will be geospatial file ("GPKG", "ESRI Shapefile", etc.):
+# File format for geospatial file ("GPKG", "ESRI Shapefile", etc.):
 driver <- "GPKG"
-#
-# Output ELITE data: ("stand"/"PA"/"both")
+
+# Output level of ELITE results: ("stand"/"PA"/"both")
 output_level <- "both"
-#
+
 ````
 <cr>  
 <cr>  
@@ -91,7 +95,7 @@ output_level <- "both"
 
 Get biotope compartment data from specified areas (Full data, defined PA types or by list of names). Different PA types have overlapping stands, so same stand may occur multiple times. PA type is stored in one column. Excessive fields are removed and the rest are renamed from finnish to english.
 
-```` {r}
+```` {r, message=FALSE}
 BT_COMPARTMENTS <- read_compartmentdata(PA_sites) 
 ````
 
@@ -104,12 +108,13 @@ BT_COMPARTMENTS <- read_compartmentdata(PA_sites)
     
 #### 03 Subset to forests  
 
+Subset is done by field "inventoryclass", where different types of forested compartments have their on codes. 
 ````{r}
 STANDS <- subset_to_forests(BT_COMPARTMENTS)
 ````
 
-````{r}
-plot(st_geometry(BT_COMPARTMENTS[BT_COMPARTMENTS$PA_id==1808,]), col ="grey")
+````{r, fig.asp = 1, out.width = '40%'}
+plot(st_geometry(BT_COMPARTMENTS[BT_COMPARTMENTS$PA_id==1808,]), col ="grey", asp = NA)
 plot(st_geometry(STANDS[STANDS$PA_id==1808,]), col ="green", add=TRUE)
 ````
 
@@ -168,6 +173,7 @@ for example:
 
 ### PART II: Calculate ELITE input variables
 
+<cr>  
 <cr>  
 
 #### 07 Calculate number of large trunks in stands
@@ -269,7 +275,7 @@ ELITE index is calculated by comparing values of current input variables to habi
 
 In practice this is done by ELITE_calculator function, that returns a index value between 0 and 1:
 
-    ELITE_value <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list =         feature_weights, exceed_warnings = T) {
+    ELITE_value <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list = feature_weights, exceed_warnings = T) {
       
       stopifnot(habitat %in% names(reference_variable_list))
       
@@ -278,7 +284,7 @@ In practice this is done by ELITE_calculator function, that returns a index valu
       weights <- weight_list[[habitat]]
       
       # if inputs exceed reference values replace them with reference
-      if(exceed_warnings) if(any(cur_values > ref_values)) warning("One or more input values exceed the reference      value. Replacing exceeding values with reference value.\n")
+      if(exceed_warnings) if(any(cur_values > ref_values)) warning("One or more input values exceed the reference value. Replacing exceeding values with reference value.\n")
       cur_values[cur_values > ref_values] <- ref_values[cur_values > ref_values]
       
       # compute the ELITE value
@@ -286,13 +292,87 @@ In practice this is done by ELITE_calculator function, that returns a index valu
       
     }
 
+````{r, echo=FALSE, warning=FALSE, message=FALSE, out.width = '120%', fig.asp = 0.30}
+library(tmap)
+elite_breaks = c(0,0.17,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1)
+map1 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[60],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = unique(STANDS$PA_name)[60], main.title.size = 0.75, legend.show = F)
+map2 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[153],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = unique(STANDS$PA_name)[153], main.title.size = 0.75, legend.show = F)
+map3 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[27],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders() + tm_layout(main.title = unique(STANDS$PA_name)[27], main.title.size = 0.75, legend.show = F)
+map4 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[13],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = unique(STANDS$PA_name)[13], main.title.size = 0.75, legend.outside = TRUE) #, 
+tmap_arrange(map1, map2, map3, map4, widths = c(0.22,0.22,0.22,0.36), asp = 0.80)
+
+````
 
 <cr>  
 <cr>  
 
+#### 12 Calculate PA specific ELITE metrics 
+
+Data is grouped by PA name and different kinds of ELITE metrics are calculated. Area information of stands is summed and for example median of stand inventory years is stored. New supporting info is calculated, for example fractions of the three habitat types in area. 
+
+````{r, message=FALSE}
+PA_ELITE <- calc_ELITE_PA_metrics(STANDS, quality_treshold)
+````
+ELITE metrics are calculated as below inside the function:  
+
+              elite_mean = round(weighted.mean(x=elite, w=area_ha),3),                   # Area weighted mean ELITE 
+              elite_Quality_ha = round(sum(area_ha[elite >= quality_treshold[1]]), 2),   # forest area above quality treshold
+              elite_Quality_pct = round(100* sum(area_ha[elite >= quality_treshold[1]]) / PA_forest_ha[1], 2), # forest area above quality treshold
+              elite_var = round(var(elite), 3),                                          # ELITE variance in PA
+
+<cr>  
+
+As a result, stand level information (row 1 in figure) is aggregated to protected area level information (row 2). 
+````{r, echo=FALSE, warning=FALSE, message=FALSE, out.width = '120%', fig.asp = 0.30}
+library(tmap)
+elite_breaks = c(0,0.17,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1)
+map1 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[60],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = unique(STANDS$PA_name)[60], main.title.size = 0.75, legend.show = F)
+map2 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[153],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = unique(STANDS$PA_name)[153], main.title.size = 0.75, legend.show = F)
+map3 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[27],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders() + tm_layout(main.title = unique(STANDS$PA_name)[27], main.title.size = 0.75, legend.show = F)
+map4 <- tm_shape(STANDS[STANDS$PA_name == unique(STANDS$PA_name)[13],]) + tm_fill("elite", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = unique(STANDS$PA_name)[13], main.title.size = 0.75, legend.outside = TRUE) #, 
+tmap_arrange(map1, map2, map3, map4, widths = c(0.22,0.22,0.22,0.36), asp = 0.80)
+
+````
+
+````{r, echo=FALSE, warning=FALSE, message=FALSE, out.width = '120%', fig.asp = 0.30}
+library(tmap)
+elite_breaks = c(0,0.17,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1)
+map1 <- tm_shape(PA_ELITE[PA_ELITE$PA_name == unique(STANDS$PA_name)[60],]) + tm_fill("elite_mean", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = paste(unique(STANDS$PA_name)[60], ": ", PA_ELITE$elite_mean[PA_ELITE$PA_name == unique(STANDS$PA_name)[60]], sep = ""), main.title.size = 0.75, legend.show = F)
+map2 <- tm_shape(PA_ELITE[PA_ELITE$PA_name == unique(STANDS$PA_name)[153],]) + tm_fill("elite_mean", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = paste(unique(STANDS$PA_name)[153], ": ", PA_ELITE$elite_mean[PA_ELITE$PA_name == unique(STANDS$PA_name)[153]], sep = ""), main.title.size = 0.75, legend.show = F)
+map3 <- tm_shape(PA_ELITE[PA_ELITE$PA_name == unique(STANDS$PA_name)[27],]) + tm_fill("elite_mean", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders() + tm_layout(main.title = paste(unique(STANDS$PA_name)[27], ": ", PA_ELITE$elite_mean[PA_ELITE$PA_name == unique(STANDS$PA_name)[27]], sep = ""), main.title.size = 0.75, legend.show = F)
+map4 <- tm_shape(PA_ELITE[PA_ELITE$PA_name == unique(STANDS$PA_name)[13],]) + tm_fill("elite_mean", palette = "-viridis", style="fixed", breaks = elite_breaks) + tm_borders()  + tm_layout(main.title = paste(unique(STANDS$PA_name)[13], ": ", PA_ELITE$elite_mean[PA_ELITE$PA_name == unique(STANDS$PA_name)[13]], sep = ""), main.title.size = 0.75, legend.outside = TRUE) #, 
+tmap_arrange(map1, map2, map3, map4, widths = c(0.22,0.22,0.22,0.36), asp = 0.80)
+
+````
+![](C:/Users/E1007595/Documents/ELITE_ja_linnut/visualisointi/esitys/figures/resulttable_example.PNG){width=90%}
+
+````{r}
+colnames(PA_ELITE)
+````
+
+<cr>  
+<cr>  
+
+### PART IV: Write out
+
+<cr>  
+<cr>  
+
+#### 14 Write out
+
+Result are written out as specified by user in the beginning. XY-coordinates are calculated for feature centroids if output is not a geospatial file.  See "ouput_fields_explanations.txt" file in github ELITE repository for exact meaning of resulting fields. 
+
+````{r, warning = FALSE, message=FALSE}
+write_out(PA_ELITE, STANDS, output_level, writeout_format, writeout_folder)
+````
+
+<cr>  
+<cr>  
+<cr>  
 
 
 References: 
 
-Siipilehto J. (1999). Improving the accuracy of predicted basal-area diameter distribution in advanced stands by determining stem number. Silva Fennica vol. 33 no. 4 article id 650. https://doi.org/10.14214/sf.650
+- Elinympäristöjen tilan edistäminen Suomessa report (Kotiaho et al. eds. 2015, https://helda.helsinki.fi/bitstream/handle/10138/156982/SY_8_2015.pdf)
 
+- Siipilehto J. (1999). Improving the accuracy of predicted basal-area diameter distribution in advanced stands by determining stem number. Silva Fennica vol. 33 no. 4 article id 650. https://doi.org/10.14214/sf.650
