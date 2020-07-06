@@ -16,7 +16,7 @@ Input files needed from SAKTI database:
 - Biotope compartment shapefile (.shp) = stand data
 - Tree stratum database files (.dbf) = deadwood and living trees data related to stands
 
-The main script executing the full process (Fig. 2) is the "plan.R" at the root directory. This is the only part that has to be modified - the user provides paths to input files described above and to output file folder, sets working directory, and may change default processing options. These include options of for which areas to calculate index, treshold value(s) of quality forest, and output options (stand or PA level, csv or geospatial format). All functionalities in the process are separated as their own functions, which the plan.R imports from the "R"-folder. One or two functions, one R-script. 
+The main script executing the full process (Fig. 2) is the "plan.R" at the root directory. This is the only part that has to be modified - the user provides paths to input files described above and to output file folder, sets working directory, and may change default processing options. These include options of for which areas to calculate index, treshold value(s) of quality forest, and output options (stand or PA level, csv or geospatial format). All functionalities in the process are separated as their own functions in their own R-files, which the plan.R imports from the "R"-folder. 
 
 
 ![ELITE process flowchart](https://github.com/PKullberg/EEA_and_BD/blob/master/figures/ELITE_workflow2.4.png?raw=true)
