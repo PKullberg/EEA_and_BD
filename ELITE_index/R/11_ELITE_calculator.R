@@ -29,11 +29,13 @@ feature_weights <- list(
 # reference_variable_list = named list of named vectors of reference variables
 # weight_variable_list = named list of named vectors of weights for each variable
 # exceed_warnings = warn if some value exceeds the reference value
+
+# this is the original elite index, that ranges from product of 1-weghts used to 1 (although Kotiaho et al 2015 says it ranges from 0 to 1)
 ELITE_value <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list = feature_weights, exceed_warnings = T) {
   
   stopifnot(habitat %in% names(reference_variable_list))
   
-  # read right reference values and weights
+  # read right reference values and weights, although the original publication say 
   ref_values <- reference_variable_list[[habitat]]
   weights <- weight_list[[habitat]]
   
@@ -45,6 +47,47 @@ ELITE_value <- function(cur_values, habitat, reference_variable_list = reference
   prod(1 - weights * (1 - cur_values / ref_values))
   
 }
+
+# this version scales the original elite index to strictly range from from 0 to 1
+ELITE_value_scaled <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list = feature_weights_s, exceed_warnings = T) {
+  
+  stopifnot(habitat %in% names(reference_variable_list))
+  
+  # read right reference values and weights
+  ref_values <- reference_variable_list[[habitat]]
+  weights <- weight_list[[habitat]]
+  
+  # if inputs exceed reference values replace them with reference value
+  if(exceed_warnings) if(any(cur_values > ref_values)) warning("One or more input values exceeds the reference value. Replacing exceeding values with reference value.\n")
+  cur_values[cur_values > ref_values] <- ref_values[cur_values > ref_values]
+  
+  scaler <- prod(1 - weights)
+  
+  # compute the scaled ELITE value
+  (prod(1 - weights * (1 - cur_values / ref_values)) - scaler) / (1 - scaler)
+  
+}
+
+# this value linearizes (having all variables at 0.5 gives index close to 0.5) the original elite index and scales it range from 0 to 1
+ELITE_value_linear <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list = feature_weights, exceed_warnings = T) {
+  
+  stopifnot(habitat %in% names(reference_variable_list))
+  
+  # read right reference values and weights
+  ref_values <- reference_variable_list[[habitat]]
+  weights <- weight_list[[habitat]]
+  
+  # if inputs exceed reference values replace them with reference
+  if(exceed_warnings) if(any(cur_values > ref_values)) warning("One or more input values exceeds the reference value. Replacing exceeding values with reference value.\n")
+  cur_values[cur_values > ref_values] <- ref_values[cur_values > ref_values]
+  
+  scaler <- prod(1 - weights)^(1/length(cur_values))
+  
+  # compute the ELITE value
+  ((prod(1 - weights * (1 - cur_values / ref_values)))^(1/length(cur_values)) - scaler) / (1 - scaler)
+  
+}
+
 
 # this just a simple wrapper that vectorizes the ELITE_value function 
 ELITE_calculator <- function(cur_values, habitat, reference_variable_list = reference_variables, weight_list = feature_weights) {
