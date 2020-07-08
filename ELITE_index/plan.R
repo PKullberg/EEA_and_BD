@@ -151,10 +151,10 @@ STANDS$elite <- apply(STANDS, 1, function(row) {
   ELITE_value(cur_values = c(dead_wood = row[['dead_wood']], 
                              large_trunks = row[['large_trunks']], 
                              broad_leaved = row[['broad_leaved']]), 
-              habitat = row[['habitat']])
+              habitat = row[['habitat']],
+              exceed_warnings = FALSE)
   
-  # Gives warning if input values exceed natural forest reference values. This happens often especially in case of volumes of broadleaved trees.
-  # In this case, the function lowers the input value to reference value (Elite-index maximum is 1, or 100%)
+  # In case input value exceeds reference value, the value is lowered to reference value (Elite-index maximum is 1, or 100%)
 })
 
 # PROTECTED AREAS
@@ -168,7 +168,6 @@ PA_ELITE <- calc_ELITE_PA_metrics(STANDS, quality_treshold)
 #################################################
 
 write_out(PA_ELITE, STANDS, output_level, writeout_format, writeout_folder)
-
 
 
 
