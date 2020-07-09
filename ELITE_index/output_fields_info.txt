@@ -1,0 +1,88 @@
+## Explanation of Automated-ELITE-process output fields
+
+
+#### STANDS_ELITE
+
+
+stand_id = ID of the stand
+
+PA_name = Name of the protected area where the stand is located
+
+PA_id = ID of the protected area where the stand is located (SAKTI has own fields for different types of protected areas)
+
+PA_type = Type of protected area (All that have their own name fields in SAKTI). NATURA/ VSA (Government owned protected areas, Valtion suojelualueet) / YSA (Private protected areas) / VMS (Goverment owned areas for other protective uses, Valtion muut suojelutarkoituksiin varatut alueet)
+
+inventoryclass = Type of habitat. See SAKTI documentation.
+
+forvegetation_zone = Forest vegetation zone. See SAKTI  documentation
+
+area_ha = area of stand in hectares
+
+inventory_year = year when forest inventory has been done on stand
+
+habitat = habitat type as in explained in ELITE_calculator function. Lehdot / kankaat / karukot
+
+PA_area_ha = Total area of Protected area where stand is located, hectares
+
+PA_forest_ha = Forested area of Protected area where stand is located, hectares
+
+PA_forest_pct = Forested area (%) percentage of Protected area total area
+
+large_trunks = number of large trunks on stand. As default large trunk is defined as larger than 40cm diameter from breast height. 
+
+broad_leaved = amount of broad-leaved trees on stand (m3/ha)
+
+dead_wood = amount of deadwood on stand (m3/ha)
+
+decayclass_1_m3 = amount of deadwood from decay class 1 (m3) (1-hardest)
+decayclass_2_m3 = amount of deadwood from decay class 2 (m3)
+decayclass_3_m3 = amount of deadwood from decay class 3 (m3) (3-softest)
+
+elite = ELITE-index of stand
+
+geometry = (ETRS89 / ETRS-TM35FIN, EPSG:3067)
+
+or
+
+centroid_lat = latitude of stand centroid (ETRS89 / ETRS-TM35FIN, EPSG:3067)
+
+centroid_lon = longitude of stand centroid (ETRS89 / ETRS-TM35FIN, EPSG:3067)
+
+
+
+##############################################################################
+
+### PA_ELITE
+
+same as above, plus:
+
+elite_mean = area weighed mean value of all calculated stand ELITE-indices in Protected area
+
+elite_QualityXX_ha = area of quality forest indicated by Elite index (for example elite_Quality30_ha with treshold value 0.3) - summed area of all stands that have ELITE-index larger than set quality treshold value (XX)
+
+elite_QualityXX_pct = amount of quality forest indicated by Elite index in protected area (%). Quality stand area percentage of PA total forested area.
+
+elite_var = variance of all stand Elite_indices in protected area.
+
+PA_elite_forest_coverage = Percentage (%) of forested area of PA total area.
+
+lehto_pct = percentage (%) of lehto-habitats (see field "habitat") of PA total area
+
+kangas_pct  =  percentage (%) of kangas-habitats (see field "habitat") of PA total area
+
+karukko_pct  =  percentage (%) of karukko-habitats (see field "habitat") of PA total area
+
+median_deadwood_m3 = median of stand specific values in PA
+
+median_broadleaved_m3 = median of stand specific values in PA
+
+median_largetrunks_per_ha = median of stand specific values in PA
+
+
+geometry = combined geometry of PA stands where ELITE-indices were calculated (ETRS89 / ETRS-TM35FIN, EPSG:3067)
+
+or
+
+centroid_lat = latitude of geometry centroid (ETRS89 / ETRS-TM35FIN, EPSG:3067)
+
+centroid_lon = longitude of geometry centroid (ETRS89 / ETRS-TM35FIN, EPSG:3067)
