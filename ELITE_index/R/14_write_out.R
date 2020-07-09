@@ -8,7 +8,7 @@ write_out <- function (PA_ELITE, STANDS, output_level, writeout_format, writeout
       filename <- case_when(driver=="GPKG" ~ "PA_ELITE.gpkg", driver=="ESRI shapefile" ~ "PA_ELITE.shp")
       st_write(PA_ELITE, dsn =paste(getwd(), writeout_folder, filename, sep = "/"), driver= driver, append=FALSE)
     }
-    if(output_level == "stands" | output_level == "both") {
+    if(output_level == "stand" | output_level == "both") {
       filename <- case_when(driver=="GPKG" ~ "STANDS_ELITE.gpkg", driver=="ESRI shapefile" ~ "STANDS_ELITE.shp")
       st_write(STANDS, dsn = paste(getwd(), writeout_folder, filename, sep = "/"), driver= driver ,append=FALSE)
     }
@@ -25,7 +25,7 @@ write_out <- function (PA_ELITE, STANDS, output_level, writeout_format, writeout
     if(output_level == "PA" | output_level == "both") {
       write.csv(PA_ELITE, file = paste(getwd(), writeout_folder, "PA_ELITE.csv", sep = "/"))
     }
-    if(output_level == "stands" | output_level == "both") {
+    if(output_level == "stand" | output_level == "both") {
       write.csv(STANDS, file = paste(getwd(), writeout_folder, "STANDS_ELITE.csv", sep = "/"))
     }
   }
